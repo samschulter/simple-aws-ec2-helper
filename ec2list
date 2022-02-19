@@ -1,0 +1,12 @@
+#!/bin/bash
+
+INSTS_ALL=`aws ec2 describe-instances | jq '.Reservations[].Instances[].Tags[] | select(.Key == "Name") | .Value'`
+INSTS_RUN=`aws ec2 describe-instances | jq '.Reservations[].Instances[] | select(.State.Name == "running") | .Tags[] | select(.Key == "Name") | .Value'`
+INSTS_STOP=`aws ec2 describe-instances | jq '.Reservations[].Instances[] | select(.State.Name == "stopped") | .Tags[] | select(.Key == "Name") | .Value'`
+
+echo "All:" ${INSTS_ALL}
+echo "Running:" ${INSTS_RUN}
+echo "Stopped:" ${INSTS_STOP}
+
+
+

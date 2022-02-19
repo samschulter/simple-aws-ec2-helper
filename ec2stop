@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Get input arguments
+if [ "$#" -ne 1 ]; then
+    echo "Usage: ec2stop <instance-name>"
+    exit 0
+fi
+NAME=$1
+
+# Find instance ID from Tag name
+INSTANCE_ID=`aws ec2 describe-instances --filters "Name=tag:Name,Values=${NAME}" | jq -r '.Reservations[0].Instances[0].InstanceId'`
+if [ $INSTANCE_ID == null ]
+then
+    echo "No instance found with name '${NAME}'"
+    exit 0
+fi
+
+# Check if already stopped
+STATE=`aws ec2 describe-instances --filters "Name=tag:Name,Values=${NAME}" | jq -r '.Reservations[0].Instances[0].State.Name'`
+if [ "$STATE" == "stopped" ]
+then
+    echo "EC2 instance ${NAME} (${INSTANCE_ID}) is already stopped ..."
+    exit 0
+fi
+
+# To avoid unwanted behavior, we only allow stopping an instance from a 'running' state
+if [ "$STATE" != "running" ]
+then
+    echo "EC2 instance ${NAME} (${INSTANCE_ID}) is not in 'running' state, please check the web console"
+    exit 0
+fi
+
+echo "Stopping EC2 instance ${NAME} (${INSTANCE_ID}) ..."
+aws ec2 stop-instances --instance-ids $INSTANCE_ID | jq

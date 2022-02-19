@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Get input arguments
+if [ "$#" -ne 1 ]; then
+    echo "Usage: ec2ssh <instance-name>"
+    exit 0
+fi
+NAME=$1
+
+# Assert the path to the .pem is set
+if [[ -z "${AWS_PEM_FILE_PATH}" ]]; then
+    echo "The environment variable 'AWS_PEM_FILE_PATH' is not set!"
+    exit 0
+else
+    PEM_FILE="${AWS_PEM_FILE_PATH}"
+fi
+
+# Find instance ID from Tag name
+INSTANCE_ID=`aws ec2 describe-instances --filters "Name=tag:Name,Values=${NAME}" | jq -r '.Reservations[0].Instances[0].InstanceId'`
+if [ $INSTANCE_ID == null ]
+then
+    echo "No instance found with name '${NAME}'"
+    exit 0
+fi
+
+# Assert if already running
+STATE=`aws ec2 describe-instances --filters "Name=tag:Name,Values=${NAME}" | jq -r '.Reservations[0].Instances[0].State.Name'`
+if [ "$STATE" != "running" ]
+then
+    echo "EC2 instance ${NAME} (${INSTANCE_ID}) is has not been started ... please run 'ec2start ${NAME}' first"
+    exit 0
+fi
+
+PUBLIC_DNS=`aws ec2 describe-instances --filters "Name=tag:Name,Values=${NAME}" | jq -r '.Reservations[0].Instances[0].PublicDnsName'`
+
+# ssh -i work/org/cloud-compute/necma-west2.pem ubuntu@ec2-44-234-42-10.us-west-2.compute.amazonaws.com
+ssh -i $PEM_FILE ubuntu@$PUBLIC_DNS
+
+
